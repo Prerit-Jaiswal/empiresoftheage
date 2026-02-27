@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Empires of the Age</title>
+<link href="https://fonts.googleapis.com/css2?family=Uncial+Antiqua&family=IM+Fell+English:ital@0;1&family=Philosopher:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e1117;
+  --panel: #161b24;
+  --panel2: #1c2230;
+  --border: rgba(180,150,80,0.25);
+  --gold: #d4a84b;
+  --gold2: #f0c060;
+  --gold-dim: #7a6030;
+  --text: #d8cdb0;
+  --text-dim: #7a7060;
+  --red: #c0392b; --red2: #e74c3c;
+  --blue: #2980b9; --blue2: #3498db;
+  --green: #27ae60; --green2: #2ecc71;
+  --teal: #16a085;
+  --purple: #8e44ad;
+
+  /* Terrain colors */
+  --t-grass: #3a5c2a;
+  --t-grass2: #4a7035;
+  --t-forest: #1e4020;
+  --t-hills: #7a6040;
+  --t-mountain: #5a5050;
+  --t-water: #1a3a5c;
+  --t-water2: #1e4570;
+  --t-desert: #8a7a50;
+  --t-tundra: #607070;
+
+  --hex-size: 38px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Philosopher', serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOP BAR ── */
+#topbar {
+  background: linear-gradient(180deg, #070b12 0%, #111827 100%);
+  border-bottom: 1px solid rgba(180,150,80,0.3);
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  z-index: 100;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.6);
+}
+#game-title {
+  font-family: 'Uncial Antiqua', cursive;
+  font-size: 1.15rem;
+  color: var(--gold2);
+  text-shadow: 0 0 20px rgba(212,168,75,0.5), 0 1px 3px rgba(0,0,0,0.8);
+  margin-right: 8px;
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+}
+.resource-chip {
+  display: flex; align-items: center; gap: 5px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(0,0,0,0.3));
+  border: 1px solid rgba(180,150,80,0.2);
+  border-radius: 4px;
+  padding: 4px 11px;
+  font-size: 0.8rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  transition: border-color 0.2s;
+}
+.resource-chip:hover { border-color: rgba(212,168,75,0.4); }
+.resource-chip .icon { font-size: 1rem; }
+.resource-chip .val { color: var(--gold2); font-weight: 700; font-size: 0.9rem; }
+.resource-chip .label { color: var(--text-dim); font-size: 0.65rem; }
+#turn-info {
+  margin-left: auto;
+  font-family: 'Uncial Antiqua', cursive;
+  font-size: 0.9rem;
+  color: var(--gold);
+  white-space: nowrap;
+  text-shadow: 0 0 10px rgba(212,168,75,0.3);
+}
+#end-turn-btn {
+  background: linear-gradient(135deg, #7a1800, #b03020);
+  border: 1px solid rgba(231,76,60,0.6);
+  color: #ffcdc9;
+  font-family: 'Uncial Antiqua', cursive;
+  font-size: 0.8rem;
+  padding: 6px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+#end-turn-btn:hover {
+  background: linear-gradient(135deg,#a02800,#e74c3c);
+  box-shadow: 0 0 16px rgba(231,76,60,0.5), 0 2px 8px rgba(0,0,0,0.4);
+  transform: translateY(-1px);
+}
+#end-turn-btn:active { transform: translateY(0); }
+
+/* ── MAIN LAYOUT ── */
+#main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── MAP ── */
+#map-wrap {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: #0a0f1a;
+  cursor: grab;
+}
+#map-wrap:active { cursor: grabbing; }
+#map-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  image-rendering: pixelated;
+}
+
+/* ── RIGHT PANEL ── */
+#right-panel {
+  width: 275px;
+  background: linear-gradient(180deg, #0f1520 0%, #111827 100%);
+  border-left: 1px solid rgba(180,150,80,0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.4);
+}
+
+.rp-section {
+  border-bottom: 1px solid rgba(180,150,80,0.12);
+  padding: 10px 13px;
+}
+.rp-title {
+  font-family: 'Uncial Antiqua', cursive;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: rgba(180,150,80,0.5);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(180,150,80,0.08);
+}
+
+/* Selected tile */
+#tile-info { font-size: 0.82rem; color: var(--text); }
+#tile-info .tile-name { font-family: 'Uncial Antiqua', cursive; font-size: 1rem; color: var(--gold2); margin-bottom: 4px; }
+#tile-info .tile-stat { color: var(--text-dim); font-size: 0.75rem; margin: 2px 0; }
+
+/* Unit panel */
+#unit-panel { flex-shrink: 0; }
+.unit-card {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px;
+  margin-bottom: 6px;
+}
+.unit-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.unit-icon { font-size: 1.4rem; }
+.unit-name { font-family: 'Uncial Antiqua', cursive; font-size: 0.85rem; color: var(--gold); }
+.unit-owner { font-size: 0.7rem; color: var(--text-dim); }
+.unit-stats { display: flex; gap: 8px; flex-wrap: wrap; }
+.ustat { font-size: 0.72rem; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 2px; }
+.ustat.hp { color: var(--green2); }
+.ustat.atk { color: var(--red2); }
+.ustat.mov { color: var(--blue2); }
+.action-btns { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+.abtn {
+  font-family: 'Philosopher', serif;
+  font-size: 0.68rem;
+  padding: 3px 8px;
+  border-radius: 2px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.abtn-move { background: rgba(41,128,185,0.2); border-color: var(--blue); color: var(--blue2); }
+.abtn-move:hover { background: rgba(41,128,185,0.4); }
+.abtn-attack { background: rgba(192,57,43,0.2); border-color: var(--red); color: var(--red2); }
+.abtn-attack:hover { background: rgba(192,57,43,0.4); }
+.abtn-found { background: rgba(212,168,75,0.15); border-color: var(--gold-dim); color: var(--gold); }
+.abtn-found:hover { background: rgba(212,168,75,0.3); }
+.abtn-skip { background: rgba(100,100,100,0.15); border-color: #555; color: #888; }
+
+/* City panel */
+.city-card {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px;
+  margin-bottom: 5px;
+}
+.city-name { font-family: 'Uncial Antiqua', cursive; font-size: 0.9rem; color: var(--gold2); }
+.city-pop { font-size: 0.72rem; color: var(--text-dim); margin: 2px 0; }
+.city-prod { font-size: 0.72rem; color: var(--text); margin: 2px 0; }
+.progress-bar { background: rgba(0,0,0,0.4); border-radius: 2px; height: 6px; margin: 4px 0; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.build-queue { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+.bq-btn {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  background: rgba(212,168,75,0.1);
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  color: var(--gold);
+  cursor: pointer;
+  font-family: 'Philosopher', serif;
+}
+.bq-btn:hover { background: rgba(212,168,75,0.25); }
+
+/* Districts list */
+.district-chip {
+  display: inline-block;
+  font-size: 0.62rem;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin: 2px 2px 0 0;
+  border: 1px solid;
+}
+
+/* Log */
+#log-section { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 80px; }
+#log { flex: 1; overflow-y: auto; font-size: 0.72rem; padding: 4px 0; scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent; }
+#log p { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--text-dim); }
+#log p.good { color: var(--green2); }
+#log p.bad { color: var(--red2); }
+#log p.gold { color: var(--gold); }
+
+/* ── BOTTOM BAR (minimap + tech) ── */
+#bottombar {
+  height: 90px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0;
+  flex-shrink: 0;
+}
+#minimap-wrap {
+  width: 160px;
+  padding: 6px;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#minimap-wrap .label { font-size: 0.6rem; color: var(--text-dim); margin-bottom: 3px; font-family: 'Uncial Antiqua', cursive; }
+#minimap { width: 100%; height: 65px; border: 1px solid var(--border); border-radius: 2px; }
+
+#tech-bar {
+  flex: 1;
+  padding: 6px 12px;
+  overflow: hidden;
+}
+.tech-bar-title { font-size: 0.6rem; color: var(--text-dim); margin-bottom: 4px; font-family: 'Uncial Antiqua', cursive; letter-spacing: 0.1em; }
+.tech-grid { display: flex; gap: 6px; flex-wrap: wrap; }
+.tech-item {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.tech-item:hover { border-color: var(--gold-dim); background: rgba(212,168,75,0.1); }
+.tech-item.researched { border-color: var(--green); color: var(--green2); background: rgba(39,174,96,0.1); }
+.tech-item.researching { border-color: var(--gold); color: var(--gold2); background: rgba(212,168,75,0.15); }
+.tech-item.locked { opacity: 0.4; cursor: not-allowed; }
+
+/* ── MODAL ── */
+#modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.8); z-index: 500;
+  justify-content: center; align-items: center;
+}
+#modal-overlay.open { display: flex; }
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--gold-dim);
+  border-radius: 4px;
+  padding: 24px 28px;
+  min-width: 300px; max-width: 420px;
+  box-shadow: 0 0 60px rgba(0,0,0,0.9);
+}
+.modal h3 { font-family: 'Uncial Antiqua', cursive; color: var(--gold2); font-size: 1.1rem; margin-bottom: 10px; }
+.modal p { color: var(--text-dim); font-size: 0.85rem; margin: 4px 0; }
+.modal-btns { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+.modal-btns button {
+  font-family: 'Philosopher', serif; font-size: 0.8rem;
+  padding: 6px 14px; border-radius: 2px; cursor: pointer; border: 1px solid; transition: all 0.15s;
+}
+.btn-confirm { background: rgba(39,174,96,0.2); border-color: var(--green); color: var(--green2); }
+.btn-confirm:hover { background: rgba(39,174,96,0.4); }
+.btn-cancel { background: rgba(100,100,100,0.2); border-color: #555; color: #888; }
+.btn-cancel:hover { background: rgba(100,100,100,0.35); }
+
+/* ── ACTION MODE indicator ── */
+#action-mode {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  padding: 6px 18px;
+  font-family: 'Uncial Antiqua', cursive;
+  font-size: 0.85rem;
+  color: var(--gold2);
+  display: none;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Fog of war overlay via canvas — handled in JS */
+
+/* Victory/defeat */
+#endgame {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.93); z-index: 600;
+  justify-content: center; align-items: center; flex-direction: column;
+  text-align: center;
+}
+#endgame.open { display: flex; }
+#endgame h2 { font-family: 'Uncial Antiqua', cursive; font-size: 2.5rem; margin-bottom: 12px; }
+#endgame p { color: var(--text-dim); font-size: 1rem; margin: 6px 0; }
+.victory-title { color: var(--gold2); text-shadow: 0 0 40px rgba(240,192,96,0.5); }
+.defeat-title { color: var(--red2); text-shadow: 0 0 40px rgba(231,76,60,0.4); }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <span id="game-title">⚔ Empires of the Age</span>
+  <div class="resource-chip"><span class="icon">🌾</span><span class="val" id="res-food">0</span><span class="label">/turn</span></div>
+  <div class="resource-chip"><span class="icon">⚙</span><span class="val" id="res-prod">0</span><span class="label">/turn</span></div>
+  <div class="resource-chip"><span class="icon">🔬</span><span class="val" id="res-sci">0</span><span class="label">/turn</span></div>
+  <div class="resource-chip"><span class="icon">💰</span><span class="val" id="res-gold">0</span><span class="label">gold</span></div>
+  <div class="resource-chip"><span class="icon">⚔</span><span class="val" id="res-units">0</span><span class="label">units</span></div>
+  <span id="turn-info">Turn 1</span>
+  <button id="end-turn-btn" onclick="endTurn()">End Turn ▶</button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="map-wrap">
+    <canvas id="map-canvas"></canvas>
+    <div id="action-mode">Select move destination</div>
+  </div>
+
+  <div id="right-panel">
+    <!-- Tile info -->
+    <div class="rp-section" id="tile-section">
+      <div class="rp-title">Territory</div>
+      <div id="tile-info"><span style="color:var(--text-dim);font-style:italic;">Click a tile</span></div>
+    </div>
+
+    <!-- Unit panel -->
+    <div class="rp-section" id="unit-panel">
+      <div class="rp-title">Selected Unit</div>
+      <div id="unit-content"><span style="color:var(--text-dim);font-style:italic;font-size:0.8rem;">No unit selected</span></div>
+    </div>
+
+    <!-- Cities -->
+    <div class="rp-section" style="flex:1;overflow-y:auto;">
+      <div class="rp-title">Your Cities</div>
+      <div id="cities-list"></div>
+    </div>
+
+    <!-- Log -->
+    <div class="rp-section log-section" id="log-section" style="flex-shrink:0;max-height:160px;">
+      <div class="rp-title">Chronicle</div>
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div id="bottombar">
+  <div id="minimap-wrap">
+    <div class="label">MAP</div>
+    <canvas id="minimap"></canvas>
+  </div>
+  <div id="tech-bar">
+    <div class="tech-bar-title">TECHNOLOGY TREE — Click to research</div>
+    <div class="tech-grid" id="tech-grid"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Confirm</h3>
+    <p id="modal-body"></p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" id="modal-confirm-btn" onclick="confirmModal()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Endgame -->
+<div id="endgame">
+  <h2 id="endgame-title"></h2>
+  <p id="endgame-body"></p>
+  <button style="margin-top:20px;padding:10px 30px;background:rgba(212,168,75,0.2);border:1px solid var(--gold);color:var(--gold2);font-family:'Philosopher',serif;font-size:1rem;border-radius:3px;cursor:pointer;" onclick="location.reload()">New Game</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONSTANTS & CONFIG
+// ═══════════════════════════════════════════════════════════
+const COLS = 18, ROWS = 12;
+const HS = 32; // hex size (flat-top)
+const HW = HS * 2;
+const HH = Math.sqrt(3) * HS;
+
+// Terrain types
+const T = {
+  WATER:0, GRASS:1, FOREST:2, HILLS:3, MOUNTAIN:4, DESERT:5, TUNDRA:6
+};
+const TERRAIN_DATA = {
+  [T.WATER]:   { name:'Ocean',    icon:'🌊', color:'#1a3a5c', color2:'#1e4570', food:0, prod:0, sci:0, passable:false, canSettle:false },
+  [T.GRASS]:   { name:'Plains',   icon:'🌿', color:'#2d4a1e', color2:'#3a5c2a', food:2, prod:1, sci:0, passable:true,  canSettle:true  },
+  [T.FOREST]:  { name:'Forest',   icon:'🌲', color:'#1a3318', color2:'#1e4020', food:1, prod:2, sci:1, passable:true,  canSettle:true  },
+  [T.HILLS]:   { name:'Hills',    icon:'⛰', color:'#5a4830', color2:'#7a6040', food:1, prod:2, sci:0, passable:true,  canSettle:true  },
+  [T.MOUNTAIN]:{ name:'Mountain', icon:'🏔', color:'#3c3030', color2:'#5a5050', food:0, prod:0, sci:2, passable:false, canSettle:false },
+  [T.DESERT]:  { name:'Desert',   icon:'🏜', color:'#6b5e38', color2:'#8a7a50', food:0, prod:1, sci:0, passable:true,  canSettle:true  },
+  [T.TUNDRA]:  { name:'Tundra',   icon:'❄', color:'#404c4c', color2:'#607070', food:1, prod:0, sci:0, passable:true,  canSettle:true  },
+};
+
+// Unit types
+const UNIT_TYPES = {
+  settler:  { name:'Settler',  icon:'🏕', hp:50, atk:0,  def:5,  mov:2, cost:80,  canFound:true,  range:1 },
+  warrior:  { name:'Warrior',  icon:'⚔', hp:80, atk:20, def:15, mov:2, cost:40,  canFound:false, range:1 },
+  archer:   { name:'Archer',   icon:'🏹', hp:60, atk:25, def:10, mov:2, cost:60,  canFound:false, range:2 },
+  horseman: { name:'Horseman', icon:'🐴', hp:70, atk:30, def:15, mov:4, cost:80,  canFound:false, range:1, req:'horseback_riding' },
+  catapult: { name:'Catapult', icon:'🗿', hp:50, atk:40, def:5,  mov:2, cost:100, canFound:false, range:2, req:'mathematics' },
+  swordsman:{ name:'Swordsman',icon:'🗡', hp:90, atk:35, def:20, mov:2, cost:90,  canFound:false, range:1, req:'iron_working' },
+};
+
+// District types
+const DISTRICT_TYPES = {
+  campus:    { name:'Campus',    icon:'🔬', color:'#3498db', sci:3,  food:0, prod:0, cost:60, req:'writing' },
+  forge:     { name:'Forge',     icon:'⚒', color:'#e67e22', sci:0,  food:0, prod:3, cost:55, req:null },
+  market:    { name:'Market',    icon:'💰', color:'#f1c40f', sci:0,  food:0, prod:0, cost:50, gold:3, req:null },
+  granary:   { name:'Granary',   icon:'🌾', color:'#2ecc71', sci:0,  food:3, prod:0, cost:40, req:null },
+  barracks:  { name:'Barracks',  icon:'🏰', color:'#c0392b', sci:0,  food:0, prod:0, cost:65, req:null, unitBonus:10 },
+};
+
+// Tech tree
+const TECHS = [
+  { id:'pottery',          name:'Pottery',          cost:30,  icon:'🏺', prereq:[], unlocks:['granary'] },
+  { id:'animal_husbandry', name:'Animal Husbandry',  cost:30,  icon:'🐄', prereq:[], unlocks:[] },
+  { id:'mining',           name:'Mining',            cost:40,  icon:'⛏', prereq:[], unlocks:['forge'] },
+  { id:'writing',          name:'Writing',           cost:50,  icon:'📜', prereq:['pottery'], unlocks:['campus'] },
+  { id:'archery',          name:'Archery',           cost:50,  icon:'🏹', prereq:['animal_husbandry'], unlocks:['archer'] },
+  { id:'bronze_working',   name:'Bronze Working',    cost:60,  icon:'🛡', prereq:['mining'], unlocks:['barracks','warrior'] },
+  { id:'horseback_riding', name:'Horseback Riding',  cost:80,  icon:'🐴', prereq:['animal_husbandry'], unlocks:['horseman'] },
+  { id:'iron_working',     name:'Iron Working',      cost:100, icon:'⚔', prereq:['bronze_working'], unlocks:['swordsman'] },
+  { id:'mathematics',      name:'Mathematics',       cost:120, icon:'📐', prereq:['writing'], unlocks:['catapult'] },
+  { id:'currency',         name:'Currency',          cost:100, icon:'💰', prereq:['writing'], unlocks:['market'] },
+];
+
+// City names
+const CITY_NAMES_P = ['Ironforge','Ashenvale','Goldenhall','Duskwater','Sunreach','Thornwall','Embercroft','Stormgate'];
+const CITY_NAMES_AI= ['Shadowmere','Dreadholm','Ironspire','Bloodfen','Darkreach','Grimwall','Ashkeep','Veilhaven'];
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let G = {}; // game state
+
+function newGame() {
+  G = {
+    turn: 1,
+    map: generateMap(),
+    units: [],
+    cities: [],
+    nextId: 1,
+    // Player
+    player: { gold: 50, science: 0, sciPerTurn: 0, currentTech: null, techs: new Set(), goldPerTurn: 0 },
+    // AI
+    ai: { gold: 50, science: 0, currentTech: null, techs: new Set(), aggression: 0.4 },
+    // Selection
+    selected: null, // {type:'unit'|'city'|'tile', id, ...}
+    actionMode: null, // 'move'|'attack'|'found'
+    camera: { x: 0, y: 0 },
+    fog: new Uint8Array(COLS * ROWS), // 0=fog, 1=seen, 2=visible
+  };
+
+  // Place player settler at center-left
+  const sx = Math.floor(COLS * 0.25), sy = Math.floor(ROWS / 2);
+  findGoodSpot(sx, sy, 0, (x,y) => {
+    G.map[y][x].terrain !== T.WATER && G.map[y][x].terrain !== T.MOUNTAIN;
+  });
+  spawnUnit('settler', sx, sy, 0);
+  spawnUnit('warrior', sx+1, sy, 0);
+
+  // Place AI settler at center-right
+  const ax = Math.floor(COLS * 0.75), ay = Math.floor(ROWS / 2);
+  spawnUnit('settler', ax, ay, 1);
+  spawnUnit('warrior', ax-1, ay, 1);
+
+  // Tech: start with basics
+  G.player.techs.add('pottery');
+
+  updateFog(0);
+  renderAll();
+  renderTechBar();
+  log('Your empire awakens. Found your first city!', 'gold');
+}
+
+// ═══════════════════════════════════════════════════════════
+// MAP GENERATION
+// ═══════════════════════════════════════════════════════════
+function generateMap() {
+  const map = Array.from({length:ROWS}, (_,y) => Array.from({length:COLS}, (_,x) => ({
+    terrain: T.GRASS, owner: -1, city: null, resource: null, improvement: null,
+  })));
+
+  // Perlin-like noise for terrain
+  for (let y=0;y<ROWS;y++) {
+    for (let x=0;x<COLS;x++) {
+      const n = noise2d(x/5, y/5);
+      const n2 = noise2d(x/2.5+100, y/2.5+100);
+      let t = T.GRASS;
+      if (n < -0.35) t = T.WATER;
+      else if (n < -0.1) t = (Math.random()<0.5?T.TUNDRA:T.DESERT);
+      else if (n < 0.1) t = T.GRASS;
+      else if (n < 0.3) t = T.FOREST;
+      else if (n < 0.5) t = T.HILLS;
+      else t = T.MOUNTAIN;
+
+      // Edge = water
+      if (x===0||x===COLS-1||y===0||y===ROWS-1) t = T.WATER;
+      map[y][x].terrain = t;
+    }
+  }
+
+  // Ensure playable land near start points
+  ensureLand(map, Math.floor(COLS*0.25), Math.floor(ROWS/2), 3);
+  ensureLand(map, Math.floor(COLS*0.75), Math.floor(ROWS/2), 3);
+
+  return map;
+}
+
+function ensureLand(map, cx, cy, r) {
+  for (let dy=-r;dy<=r;dy++) for (let dx=-r;dx<=r;dx++) {
+    const x=cx+dx, y=cy+dy;
+    if (x<0||x>=COLS||y<0||y>=ROWS) continue;
+    if (map[y][x].terrain===T.WATER||map[y][x].terrain===T.MOUNTAIN)
+      map[y][x].terrain = Math.random()<0.5?T.GRASS:T.FOREST;
+  }
+}
+
+// Simple value noise
+function noise2d(x, y) {
+  const ix=Math.floor(x), iy=Math.floor(y);
+  const fx=x-ix, fy=y-iy;
+  const a=rng2(ix,iy), b=rng2(ix+1,iy), c=rng2(ix,iy+1), d=rng2(ix+1,iy+1);
+  const ux=fx*fx*(3-2*fx), uy=fy*fy*(3-2*fy);
+  return a*(1-ux)*(1-uy)+b*ux*(1-uy)+c*(1-ux)*uy+d*ux*uy;
+}
+function rng2(x,y) {
+  let h = (x*374761393 + y*668265263) ^ ((x*668265263)>>4);
+  h = h^(h>>13); h = h*1274126177; h = h^(h>>16);
+  return (h&0xffff)/32768-1;
+}
+
+// ═══════════════════════════════════════════════════════════
+// UNIT MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function spawnUnit(type, x, y, owner) {
+  const t = UNIT_TYPES[type];
+  G.units.push({
+    id: G.nextId++, type, owner, x, y,
+    hp: t.hp, maxHp: t.hp,
+    movLeft: t.mov, maxMov: t.mov,
+    hasActed: false,
+  });
+}
+
+function getUnitAt(x, y) { return G.units.find(u=>u.x===x&&u.y===y&&u.hp>0); }
+function getPlayerUnits() { return G.units.filter(u=>u.owner===0&&u.hp>0); }
+function getAIUnits() { return G.units.filter(u=>u.owner===1&&u.hp>0); }
+
+// ═══════════════════════════════════════════════════════════
+// CITY MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function foundCity(x, y, owner) {
+  const tile = G.map[y][x];
+  const names = owner===0?CITY_NAMES_P:CITY_NAMES_AI;
+  const used = G.cities.filter(c=>c.owner===owner).map(c=>c.name);
+  const name = names.find(n=>!used.includes(n)) || `City ${G.nextId}`;
+
+  const city = {
+    id: G.nextId++, name, owner, x, y,
+    pop: 1, food: 0, foodNeeded: 15,
+    prod: 0, prodNeeded: 40,
+    building: null, // current production
+    districts: [],
+    territory: [{x,y}],
+  };
+  G.cities.push(city);
+  tile.city = city.id;
+  tile.owner = owner;
+
+  // Claim surrounding tiles
+  hexNeighbors(x, y).forEach(([nx,ny]) => {
+    if (ny>=0&&ny<ROWS&&nx>=0&&nx<COLS) {
+      G.map[ny][nx].owner = owner;
+      city.territory.push({x:nx,y:ny});
+    }
+  });
+
+  // Remove settler
+  G.units = G.units.filter(u=>!(u.x===x&&u.y===y&&u.type==='settler'&&u.owner===owner));
+
+  if (owner===0) {
+    log(`🏰 Founded ${name}!`, 'gold');
+    city.building = { type:'warrior', progress:0 };
+  }
+  return city;
+}
+
+function getCityAt(x,y) { return G.cities.find(c=>c.x===x&&c.y===y); }
+function getPlayerCities() { return G.cities.filter(c=>c.owner===0); }
+
+// ═══════════════════════════════════════════════════════════
+// HEX MATH
+// ═══════════════════════════════════════════════════════════
+function hexToPixel(col, row) {
+  // Offset hex grid (flat-top)
+  const x = HS * 1.5 * col + HS;
+  const y = HH * (row + (col % 2 === 1 ? 0.5 : 0)) + HH/2;
+  return [x, y];
+}
+
+function pixelToHex(px, py) {
+  // Approximate inverse
+  const col = Math.round((px - HS) / (HS * 1.5));
+  const row = Math.round((py - HH/2) / HH - (col%2===1?0.5:0));
+  return [col, row];
+}
+
+function hexNeighbors(col, row) {
+  const dirs = col%2===0
+    ? [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]]
+    : [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
+  return dirs.map(([dc,dr]) => [col+dc, row+dr])
+    .filter(([c,r]) => c>=0&&c<COLS&&r>=0&&r<ROWS);
+}
+
+function hexDist(ax,ay,bx,by) {
+  // cube coords
+  const toC = (col,row) => {
+    const q = col;
+    const r = row - (col - (col&1))/2;
+    return [q, r, -q-r];
+  };
+  const [aq,ar,as] = toC(ax,ay);
+  const [bq,br,bs] = toC(bx,by);
+  return Math.max(Math.abs(aq-bq),Math.abs(ar-br),Math.abs(as-bs));
+}
+
+function hexReachable(x, y, moves, owner) {
+  const visited = new Map();
+  visited.set(`${x},${y}`, 0);
+  const queue = [[x,y,0]];
+  while (queue.length) {
+    const [cx,cy,cost] = queue.shift();
+    hexNeighbors(cx,cy).forEach(([nx,ny]) => {
+      const key = `${nx},${ny}`;
+      const tile = G.map[ny][nx];
+      const terr = TERRAIN_DATA[tile.terrain];
+      if (!terr.passable) return;
+      // Can't enter enemy city tiles (for now allow movement through)
+      const newCost = cost + 1;
+      if (newCost > moves) return;
+      if (visited.has(key) && visited.get(key) <= newCost) return;
+      visited.set(key, newCost);
+      queue.push([nx,ny,newCost]);
+    });
+  }
+  visited.delete(`${x},${y}`);
+  return visited;
+}
+
+// ═══════════════════════════════════════════════════════════
+// FOG OF WAR
+// ═══════════════════════════════════════════════════════════
+function updateFog(owner) {
+  // Reset visible to seen
+  for (let i=0;i<G.fog.length;i++) if (G.fog[i]===2) G.fog[i]=1;
+
+  // Reveal around player units & cities
+  if (owner===0) {
+    getPlayerUnits().forEach(u => revealAround(u.x, u.y, 2));
+    getPlayerCities().forEach(c => revealAround(c.x, c.y, 3));
+  }
+}
+
+function revealAround(cx, cy, range) {
+  for (let dy=-range;dy<=range;dy++) {
+    for (let dx=-range;dx<=range;dx++) {
+      const x=cx+dx, y=cy+dy;
+      if (x<0||x>=COLS||y<0||y>=ROWS) continue;
+      if (hexDist(cx,cy,x,y)<=range) {
+        G.fog[y*COLS+x] = 2; // visible
+      }
+    }
+  }
+}
+
+function isFog(x,y) { return G.fog[y*COLS+x]===0; }
+function isSeen(x,y) { return G.fog[y*COLS+x]>=1; }
+function isVisible(x,y) { return G.fog[y*COLS+x]===2; }
+
+// ═══════════════════════════════════════════════════════════
+// RENDERING
+// ═══════════════════════════════════════════════════════════
+const canvas = document.getElementById('map-canvas');
+const ctx = canvas.getContext('2d');
+const mmCanvas = document.getElementById('minimap');
+const mmCtx = mmCanvas.getContext('2d');
+let canvasW=0, canvasH=0;
+
+function resizeCanvas() {
+  const wrap = document.getElementById('map-wrap');
+  canvasW = wrap.clientWidth;
+  canvasH = wrap.clientHeight;
+  canvas.width = canvasW;
+  canvas.height = canvasH;
+}
+
+function mapWidth()  { return HS*1.5*COLS + HS*0.5; }
+function mapHeight() { return HH*ROWS + HH*0.5; }
+
+// Camera panning
+let isPanning=false, panStart={x:0,y:0}, camAtPan={x:0,y:0};
+document.getElementById('map-wrap').addEventListener('mousedown',e=>{
+  if (e.button===1||(e.button===0&&!G.actionMode)) {
+    // Allow panning with middle button or if no action mode and not clicking unit/tile
+  }
+  isPanning = e.button===1;
+  if (isPanning) { panStart={x:e.clientX,y:e.clientY}; camAtPan={...G.camera}; }
+});
+window.addEventListener('mousemove',e=>{
+  if (isPanning) {
+    G.camera.x = camAtPan.x-(e.clientX-panStart.x);
+    G.camera.y = camAtPan.y-(e.clientY-panStart.y);
+    clampCamera();
+    renderMap();
+  }
+});
+window.addEventListener('mouseup',()=>{ isPanning=false; });
+
+// Zoom with scroll
+document.getElementById('map-wrap').addEventListener('wheel',e=>{
+  e.preventDefault();
+  // Simple camera pan with scroll
+  G.camera.y += e.deltaY * 0.5;
+  G.camera.x += e.deltaX * 0.5;
+  clampCamera();
+  renderMap();
+},{passive:false});
+
+function clampCamera() {
+  const mw=mapWidth(), mh=mapHeight();
+  G.camera.x = Math.max(0, Math.min(mw-canvasW, G.camera.x));
+  G.camera.y = Math.max(0, Math.min(mh-canvasH, G.camera.y));
+}
+
+function renderAll() { renderMap(); renderMinimap(); renderSidebar(); }
+
+let highlightTiles = new Map();
+let selectedHex = null;
+let _animRunning = false;
+
+function startAnimLoop() {
+  if (_animRunning) return;
+  _animRunning = true;
+  function loop() {
+    _animFrame++;
+    renderMap();
+    renderMinimap();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+function renderMap() {
+  ctx.clearRect(0,0,canvasW,canvasH);
+
+  // Deep ocean background
+  ctx.fillStyle='#060a12';
+  ctx.fillRect(0,0,canvasW,canvasH);
+
+  ctx.save();
+  ctx.translate(-G.camera.x, -G.camera.y);
+
+  // Draw terrain back-to-front
+  for (let row=0;row<ROWS;row++) {
+    for (let col=0;col<COLS;col++) {
+      drawHex(col,row);
+    }
+  }
+
+  // Draw units on top
+  G.units.filter(u=>u.hp>0).forEach(u=>{
+    if (!isVisible(u.x,u.y)) return;
+    drawUnit(u);
+  });
+
+  ctx.restore();
+
+  // Vignette overlay
+  const vgrd = ctx.createRadialGradient(canvasW/2,canvasH/2,canvasH*0.3,canvasW/2,canvasH/2,canvasH*0.8);
+  vgrd.addColorStop(0,'rgba(0,0,0,0)');
+  vgrd.addColorStop(1,'rgba(0,0,0,0.35)');
+  ctx.fillStyle=vgrd;
+  ctx.fillRect(0,0,canvasW,canvasH);
+}
+
+function hexPath(cx,cy,r) {
+  ctx.beginPath();
+  for (let i=0;i<6;i++) {
+    const a = Math.PI/180 * (60*i-30);
+    const px = cx + r*Math.cos(a), py = cy + r*Math.sin(a);
+    i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+  }
+  ctx.closePath();
+}
+
+let _animFrame = 0;
+function drawHex(col, row) {
+  const [px,py] = hexToPixel(col,row);
+  const tile = G.map[row][col];
+  const td = TERRAIN_DATA[tile.terrain];
+  const vis = isVisible(col,row), seen = isSeen(col,row), fog = isFog(col,row);
+  const R = HS - 1;
+
+  if (fog) {
+    hexPath(px,py,R);
+    ctx.fillStyle = '#060a12';
+    ctx.fill();
+    return;
+  }
+
+  // ── BASE FILL ──
+  hexPath(px,py,R);
+  if (tile.terrain === T.WATER) {
+    // Animated water shimmer
+    const wave = Math.sin(_animFrame * 0.04 + col * 0.7 + row * 0.5) * 0.06;
+    const grd = ctx.createLinearGradient(px-R,py-R,px+R,py+R);
+    grd.addColorStop(0,   `hsl(210,55%,${18+wave*100}%)`);
+    grd.addColorStop(0.5, `hsl(215,60%,${22+wave*100}%)`);
+    grd.addColorStop(1,   `hsl(205,50%,${14+wave*100}%)`);
+    ctx.fillStyle = grd;
+  } else {
+    const grd = ctx.createRadialGradient(px-R*0.25, py-R*0.3, R*0.05, px, py, R*1.1);
+    grd.addColorStop(0, td.color2);
+    grd.addColorStop(0.6, td.color);
+    grd.addColorStop(1, shadeColor(td.color, -25));
+    ctx.fillStyle = grd;
+  }
+  ctx.fill();
+
+  // ── TEXTURE DETAIL ──
+  if (tile.terrain === T.WATER) {
+    // Wave lines
+    ctx.save();
+    hexPath(px,py,R); ctx.clip();
+    ctx.strokeStyle = `rgba(100,160,220,${0.12 + 0.06*Math.sin(_animFrame*0.05+col+row)})`;
+    ctx.lineWidth = 1;
+    for (let i=-2;i<=2;i++) {
+      const wy = py + i*9 + Math.sin(_animFrame*0.03+col*0.4)*3;
+      ctx.beginPath();
+      ctx.moveTo(px-R, wy);
+      ctx.quadraticCurveTo(px, wy - 4, px+R, wy);
+      ctx.stroke();
+    }
+    ctx.restore();
+  } else if (tile.terrain === T.FOREST) {
+    // Subtle tree texture dots
+    ctx.save(); hexPath(px,py,R); ctx.clip();
+    ctx.fillStyle = 'rgba(0,40,0,0.25)';
+    [[px-8,py-6],[px+6,py-10],[px-4,py+8],[px+10,py+4],[px,py-2]].forEach(([tx,ty])=>{
+      ctx.beginPath(); ctx.arc(tx,ty,4,0,Math.PI*2); ctx.fill();
+    });
+    ctx.restore();
+  } else if (tile.terrain === T.HILLS) {
+    // Hill shading
+    ctx.save(); hexPath(px,py,R); ctx.clip();
+    const hgrd = ctx.createLinearGradient(px-R,py+R*0.2,px+R*0.4,py-R*0.4);
+    hgrd.addColorStop(0,'rgba(0,0,0,0.2)');
+    hgrd.addColorStop(0.5,'rgba(255,255,255,0.08)');
+    hgrd.addColorStop(1,'rgba(0,0,0,0.1)');
+    ctx.fillStyle=hgrd; ctx.fillRect(px-R,py-R,R*2,R*2);
+    ctx.restore();
+  } else if (tile.terrain === T.MOUNTAIN) {
+    // Snow cap
+    ctx.save(); hexPath(px,py,R); ctx.clip();
+    const mgrd = ctx.createRadialGradient(px,py-R*0.2,R*0.05,px,py,R*0.7);
+    mgrd.addColorStop(0,'rgba(255,255,255,0.35)');
+    mgrd.addColorStop(0.5,'rgba(200,200,210,0.1)');
+    mgrd.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=mgrd; ctx.fillRect(px-R,py-R,R*2,R*2);
+    ctx.restore();
+  } else if (tile.terrain === T.DESERT) {
+    // Sand ripple
+    ctx.save(); hexPath(px,py,R); ctx.clip();
+    ctx.strokeStyle='rgba(180,160,80,0.15)'; ctx.lineWidth=1.5;
+    for(let i=-3;i<=3;i++){
+      ctx.beginPath(); ctx.moveTo(px-R,py+i*7);
+      ctx.quadraticCurveTo(px,py+i*7-3,px+R,py+i*7); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ── OWNER BORDER TINT ──
+  if (tile.owner===0) {
+    hexPath(px,py,R);
+    ctx.strokeStyle='rgba(80,160,240,0.55)';
+    ctx.lineWidth=2.5; ctx.stroke();
+  } else if (tile.owner===1) {
+    hexPath(px,py,R);
+    ctx.strokeStyle='rgba(220,60,60,0.55)';
+    ctx.lineWidth=2.5; ctx.stroke();
+  }
+
+  // ── FOW DIMMING ──
+  if (!vis && seen) {
+    hexPath(px,py,R);
+    ctx.fillStyle='rgba(0,5,15,0.58)'; ctx.fill();
+  }
+
+  // ── HIGHLIGHT (move/attack) ──
+  const hkey=`${col},${row}`;
+  if (highlightTiles.has(hkey)) {
+    hexPath(px,py,R);
+    ctx.fillStyle=highlightTiles.get(hkey); ctx.fill();
+    hexPath(px,py,R);
+    const hc = highlightTiles.get(hkey).includes('185')?'rgba(80,180,255,0.7)':'rgba(255,80,80,0.7)';
+    ctx.strokeStyle=hc; ctx.lineWidth=2; ctx.stroke();
+  }
+
+  // ── HEX GRID BORDER ──
+  hexPath(px,py,R);
+  ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=1; ctx.stroke();
+
+  // ── SELECTED GLOW ──
+  if (selectedHex && selectedHex[0]===col && selectedHex[1]===row) {
+    hexPath(px,py,R-1);
+    ctx.strokeStyle='#f0c060'; ctx.lineWidth=3; ctx.stroke();
+    hexPath(px,py,R-1);
+    ctx.strokeStyle='rgba(240,192,96,0.3)'; ctx.lineWidth=7; ctx.stroke();
+  }
+
+  if (!vis) return;
+
+  // ── TERRAIN ICONS ──
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  if (tile.terrain===T.WATER) {
+    ctx.font=`${HS*0.48}px serif`; ctx.globalAlpha=0.7;
+    ctx.fillText('🌊',px,py); ctx.globalAlpha=1;
+  } else if (tile.terrain===T.FOREST) {
+    ctx.font=`${HS*0.4}px serif`;
+    ctx.fillText('🌲',px-7,py-4); ctx.fillText('🌲',px+6,py+5);
+  } else if (tile.terrain===T.MOUNTAIN) {
+    ctx.font=`${HS*0.6}px serif`; ctx.fillText('🏔',px,py+2);
+  } else if (tile.terrain===T.HILLS) {
+    ctx.font=`${HS*0.5}px serif`; ctx.fillText('⛰',px,py+2);
+  } else if (tile.terrain===T.DESERT) {
+    ctx.font=`${HS*0.4}px serif`; ctx.fillText('🏜',px,py+2);
+  } else if (tile.terrain===T.TUNDRA) {
+    ctx.font=`${HS*0.38}px serif`; ctx.fillText('❄️',px,py+2);
+  } else {
+    // Grass: small dot cluster
+    ctx.fillStyle='rgba(80,150,60,0.4)';
+    [[px-6,py+4],[px+5,py+3],[px,py-5]].forEach(([tx,ty])=>{
+      ctx.beginPath(); ctx.arc(tx,ty,3.5,0,Math.PI*2); ctx.fill();
+    });
+  }
+
+  // ── CITY ──
+  if (tile.city !== null) {
+    const city = G.cities.find(c=>c.id===tile.city);
+    if (city) {
+      const isPlayer = city.owner===0;
+      // Glow aura
+      const glowPulse = 0.5 + 0.15*Math.sin(_animFrame*0.06);
+      const aura = ctx.createRadialGradient(px,py,R*0.1,px,py,R*0.85);
+      aura.addColorStop(0, isPlayer?`rgba(60,140,255,${glowPulse*0.35})`:`rgba(255,60,60,${glowPulse*0.35})`);
+      aura.addColorStop(1,'rgba(0,0,0,0)');
+      hexPath(px,py,R); ctx.fillStyle=aura; ctx.fill();
+
+      // City icon
+      ctx.font=`${HS*0.75}px serif`;
+      ctx.fillText(isPlayer?'🏙':'🏯', px, py-2);
+
+      // Name banner
+      const nameW = city.name.length*5.5+10;
+      ctx.fillStyle='rgba(0,0,0,0.75)';
+      roundRect(ctx, px-nameW/2, py+HS*0.42, nameW, 13, 3);
+      ctx.fill();
+      ctx.font=`bold ${HS*0.28}px 'Philosopher',serif`;
+      ctx.fillStyle= isPlayer?'#90caf9':'#ef9a9a';
+      ctx.fillText(city.name, px, py+HS*0.52);
+
+      // Pop dots
+      for(let i=0;i<Math.min(city.pop,6);i++){
+        ctx.beginPath();
+        ctx.arc(px-city.pop*3.5/2+i*4+2, py+HS*0.66, 2.5, 0, Math.PI*2);
+        ctx.fillStyle=isPlayer?'#5dade2':'#e74c3c'; ctx.fill();
+      }
+    }
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+function shadeColor(hex, pct) {
+  const num = parseInt(hex.replace('#',''),16);
+  const r = Math.min(255,Math.max(0,(num>>16)+pct));
+  const g = Math.min(255,Math.max(0,((num>>8)&0xff)+pct));
+  const b = Math.min(255,Math.max(0,(num&0xff)+pct));
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawUnit(u) {
+  const [px,py] = hexToPixel(u.x,u.y);
+  const ut = UNIT_TYPES[u.type];
+  const isSelected = G.selected?.type==='unit' && G.selected.id===u.id;
+  const isPlayer = u.owner===0;
+  const spent = u.hasActed && isPlayer;
+
+  // Outer glow if selected
+  if (isSelected) {
+    ctx.beginPath(); ctx.arc(px,py,HS*0.48,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(240,192,96,${0.4+0.2*Math.sin(_animFrame*0.12)})`;
+    ctx.lineWidth=5; ctx.stroke();
+  }
+
+  // Drop shadow
+  ctx.beginPath(); ctx.ellipse(px+2,py+HS*0.45,HS*0.33,HS*0.14,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fill();
+
+  // Shield body
+  const shieldPath = (cx,cy,r) => {
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,Math.PI,0);
+    ctx.lineTo(cx+r, cy+r*0.7);
+    ctx.quadraticCurveTo(cx, cy+r*1.5, cx-r, cy+r*0.7);
+    ctx.closePath();
+  };
+
+  // Outer shield ring
+  shieldPath(px,py-2,HS*0.38);
+  ctx.strokeStyle = isPlayer?'#5dade2':'#e74c3c';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Shield fill
+  shieldPath(px,py-2,HS*0.38);
+  const sg = ctx.createLinearGradient(px-HS*0.4,py-HS*0.4,px+HS*0.2,py+HS*0.5);
+  if (isPlayer) {
+    sg.addColorStop(0,'rgba(50,120,200,0.95)');
+    sg.addColorStop(1,'rgba(20,60,120,0.95)');
+  } else {
+    sg.addColorStop(0,'rgba(200,50,50,0.95)');
+    sg.addColorStop(1,'rgba(100,20,20,0.95)');
+  }
+  ctx.fillStyle=sg; ctx.fill();
+
+  // Shield gloss
+  shieldPath(px,py-2,HS*0.38);
+  ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fill();
+
+  // Icon
+  ctx.font=`${HS*0.42}px serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.globalAlpha=spent?0.45:1;
+  ctx.fillText(ut.icon, px, py-2);
+  ctx.globalAlpha=1;
+
+  // HP bar
+  const hpRatio = u.hp/u.maxHp;
+  const bw=HS*0.64, bx=px-bw/2, by=py+HS*0.52;
+  ctx.fillStyle='rgba(0,0,0,0.7)';
+  roundRect(ctx,bx-1,by-1,bw+2,7,2); ctx.fill();
+  const hpColor = hpRatio>0.6?'#2ecc71':hpRatio>0.3?'#f39c12':'#e74c3c';
+  ctx.fillStyle=hpColor;
+  roundRect(ctx,bx,by,bw*hpRatio,5,2); ctx.fill();
+
+  // Spent overlay
+  if (spent) {
+    ctx.beginPath(); ctx.arc(px,py-2,HS*0.38,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fill();
+    ctx.font=`${HS*0.3}px serif`;
+    ctx.fillText('💤',px,py-2);
+  }
+}
+
+function renderMinimap() {
+  const mm = document.getElementById('minimap');
+  mm.width=mm.offsetWidth||150; mm.height=mm.offsetHeight||65;
+  const cw=mm.width,ch=mm.height;
+  const cellW=cw/COLS, cellH=ch/ROWS;
+  mmCtx.clearRect(0,0,cw,ch);
+  for (let row=0;row<ROWS;row++) for (let col=0;col<COLS;col++) {
+    const tile=G.map[row][col];
+    mmCtx.fillStyle=isFog(col,row)?'#05080f':TERRAIN_DATA[tile.terrain].color;
+    mmCtx.fillRect(col*cellW,row*cellH,cellW,cellH);
+    if (tile.city!==null) {
+      const c=G.cities.find(c=>c.id===tile.city);
+      if(c) { mmCtx.fillStyle=c.owner===0?'#3498db':'#e74c3c'; mmCtx.fillRect(col*cellW,row*cellH,cellW,cellH); }
+    }
+  }
+  // Camera rect
+  const vx=G.camera.x/(mapWidth())*cw, vy=G.camera.y/(mapHeight())*ch;
+  const vw=canvasW/(mapWidth())*cw, vh=canvasH/(mapHeight())*ch;
+  mmCtx.strokeStyle='rgba(212,168,75,0.7)';
+  mmCtx.lineWidth=1;
+  mmCtx.strokeRect(vx,vy,vw,vh);
+  // Units dots
+  G.units.filter(u=>u.hp>0).forEach(u=>{
+    if (!isVisible(u.x,u.y)) return;
+    mmCtx.fillStyle=u.owner===0?'#5dade2':'#e74c3c';
+    mmCtx.fillRect(u.x*cellW,u.y*cellH,cellW,cellH);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════════════
+function renderSidebar() {
+  // Resources
+  const pcities = getPlayerCities();
+  let food=0,prod=0,sci=0,gold=G.player.gold;
+  pcities.forEach(c=>{
+    food += calcCityYield(c,'food');
+    prod += calcCityYield(c,'prod');
+    sci  += calcCityYield(c,'sci');
+    gold += calcCityYield(c,'gold');
+  });
+  document.getElementById('res-food').textContent = `+${food}`;
+  document.getElementById('res-prod').textContent = `+${prod}`;
+  document.getElementById('res-sci').textContent  = `+${sci}`;
+  document.getElementById('res-gold').textContent = Math.floor(G.player.gold);
+  document.getElementById('res-units').textContent= getPlayerUnits().length;
+  document.getElementById('turn-info').textContent= `Turn ${G.turn}`;
+
+  // Cities
+  const cl = document.getElementById('cities-list');
+  cl.innerHTML='';
+  pcities.forEach(c => {
+    const fp = c.food/c.foodNeeded*100;
+    const pp = c.building ? c.building.progress/getBuildCost(c.building.type)*100 : 0;
+    const div=document.createElement('div');
+    div.className='city-card';
+    div.innerHTML=`
+      <div class="city-name">${c.name} <span style="font-size:0.65rem;color:var(--text-dim)">pop ${c.pop}</span></div>
+      <div class="city-prod">🌾 ${calcCityYield(c,'food')}/t ⚙ ${calcCityYield(c,'prod')}/t 🔬 ${calcCityYield(c,'sci')}/t</div>
+      <div style="font-size:0.68rem;color:var(--text-dim);margin-top:2px;">Growth: <span style="color:var(--green2)">${Math.floor(fp)}%</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${fp}%;background:var(--green)"></div></div>
+      ${c.building?`<div style="font-size:0.68rem;color:var(--text-dim);">Building: <span style="color:var(--gold)">${getBuildName(c.building.type)}</span> (${Math.floor(pp)}%)</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pp}%;background:var(--gold-dim)"></div></div>`
+      :'<div style="font-size:0.68rem;color:var(--text-dim);">Idle — choose production</div>'}
+      <div class="build-queue">
+        ${getAvailableBuilds(c).map(b=>`<button class="bq-btn" onclick="setBuild(${c.id},'${b.id}')">${b.icon} ${b.name}</button>`).join('')}
+      </div>
+      ${c.districts.length?`<div style="margin-top:4px;">${c.districts.map(d=>`<span class="district-chip" style="border-color:${DISTRICT_TYPES[d].color};color:${DISTRICT_TYPES[d].color}">${DISTRICT_TYPES[d].icon}${DISTRICT_TYPES[d].name}</span>`).join('')}</div>`:''}
+    `;
+    cl.appendChild(div);
+  });
+}
+
+function calcCityYield(city, type) {
+  const tile = G.map[city.y][city.x];
+  const td = TERRAIN_DATA[tile.terrain];
+  let base = td[type]||0;
+  // Territory bonus
+  city.territory.forEach(({x,y})=>{
+    if (x===city.x&&y===city.y) return;
+    const t2 = TERRAIN_DATA[G.map[y][x].terrain];
+    base += (t2[type]||0) * 0.3;
+  });
+  base = Math.floor(base) + city.pop;
+  // District bonuses
+  city.districts.forEach(d=>{
+    const dd = DISTRICT_TYPES[d];
+    if (dd[type]) base += dd[type];
+    if (type==='gold'&&dd.gold) base += dd.gold;
+  });
+  return Math.max(1, Math.floor(base));
+}
+
+function getBuildCost(type) {
+  if (UNIT_TYPES[type]) return UNIT_TYPES[type].cost;
+  if (DISTRICT_TYPES[type]) return DISTRICT_TYPES[type].cost;
+  return 50;
+}
+function getBuildName(type) {
+  if (UNIT_TYPES[type]) return UNIT_TYPES[type].icon+' '+UNIT_TYPES[type].name;
+  if (DISTRICT_TYPES[type]) return DISTRICT_TYPES[type].icon+' '+DISTRICT_TYPES[type].name;
+  return type;
+}
+
+function getAvailableBuilds(city) {
+  const builds = [];
+  // Units
+  Object.entries(UNIT_TYPES).forEach(([id,u])=>{
+    if (u.req && !G.player.techs.has(u.req)) return;
+    if (city.building?.type===id) return;
+    builds.push({id, name:u.name, icon:u.icon});
+  });
+  // Districts
+  Object.entries(DISTRICT_TYPES).forEach(([id,d])=>{
+    if (d.req && !G.player.techs.has(d.req)) return;
+    if (city.districts.includes(id)) return;
+    if (city.building?.type===id) return;
+    builds.push({id, name:d.name, icon:d.icon});
+  });
+  return builds;
+}
+
+function setBuild(cityId, type) {
+  const city = G.cities.find(c=>c.id===cityId);
+  if (!city) return;
+  city.building = {type, progress:0};
+  log(`🏗 ${city.name} begins building ${getBuildName(type)}`, 'gold');
+  renderSidebar();
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLICK HANDLING
+// ═══════════════════════════════════════════════════════════
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left + G.camera.x;
+  const my = e.clientY - rect.top  + G.camera.y;
+  const [col, row] = pixelToHex(mx, my);
+  if (col<0||col>=COLS||row<0||row>=ROWS) return;
+
+  handleTileClick(col, row);
+});
+
+function handleTileClick(col, row) {
+  const tile = G.map[row][col];
+  selectedHex = [col,row];
+
+  if (G.actionMode === 'move') {
+    const unit = G.units.find(u=>u.id===G.selected.id);
+    const hkey = `${col},${row}`;
+    if (highlightTiles.has(hkey)) {
+      // Check if enemy unit there
+      const enemy = getUnitAt(col,row);
+      if (enemy && enemy.owner!==unit.owner) {
+        // Attack!
+        doCombat(unit, enemy);
+      } else if (!getUnitAt(col,row)) {
+        unit.x=col; unit.y=row;
+        unit.movLeft=0; unit.hasActed=true;
+        log(`${UNIT_TYPES[unit.type].name} moved.`);
+      }
+    }
+    exitActionMode();
+    updateFog(0);
+    renderAll();
+    renderSidebar();
+    return;
+  }
+
+  if (G.actionMode === 'attack') {
+    const unit = G.units.find(u=>u.id===G.selected.id);
+    const hkey = `${col},${row}`;
+    if (highlightTiles.has(hkey)) {
+      const enemy = getUnitAt(col,row);
+      if (enemy) doCombat(unit, enemy);
+    }
+    exitActionMode();
+    renderAll();
+    renderSidebar();
+    return;
+  }
+
+  if (G.actionMode === 'found') {
+    const unit = G.units.find(u=>u.id===G.selected?.id);
+    if (unit && unit.x===col && unit.y===row) {
+      foundCity(col, row, 0);
+      G.selected=null;
+      exitActionMode();
+      updateFog(0);
+      renderAll();
+      renderSidebar();
+      return;
+    }
+    exitActionMode();
+  }
+
+  // Select unit or tile
+  const unit = getUnitAt(col,row);
+  if (unit && unit.owner===0 && isVisible(col,row)) {
+    G.selected = {type:'unit', id:unit.id};
+    showUnitPanel(unit);
+  } else {
+    G.selected = {type:'tile', col, row};
+    showTilePanel(col,row);
+  }
+
+  highlightTiles.clear();
+  renderAll();
+  renderTileInfo(col, row);
+}
+
+function showTilePanel(col,row) {
+  const tile=G.map[row][col];
+  const td=TERRAIN_DATA[tile.terrain];
+  const city=tile.city!==null?G.cities.find(c=>c.id===tile.city):null;
+  const tiDiv=document.getElementById('tile-info');
+  tiDiv.innerHTML=`
+    <div class="tile-name">${td.icon} ${td.name}</div>
+    <div class="tile-stat">📍 (${col},${row})</div>
+    <div class="tile-stat">🌾 Food:${td.food} ⚙ Prod:${td.prod} 🔬 Sci:${td.sci}</div>
+    ${city?`<div class="tile-stat" style="color:var(--gold)">🏰 ${city.name}</div>`:''}
+    ${tile.owner>=0?`<div class="tile-stat">Owner: ${tile.owner===0?'You':'AI'}</div>`:''}
+  `;
+}
+
+function showUnitPanel(unit) {
+  const ut=UNIT_TYPES[unit.type];
+  document.getElementById('unit-content').innerHTML=`
+    <div class="unit-card">
+      <div class="unit-header">
+        <span class="unit-icon">${ut.icon}</span>
+        <div><div class="unit-name">${ut.name}</div><div class="unit-owner">Your unit</div></div>
+      </div>
+      <div class="unit-stats">
+        <span class="ustat hp">❤ ${unit.hp}/${unit.maxHp}</span>
+        ${ut.atk>0?`<span class="ustat atk">⚔ ${ut.atk}</span>`:''}
+        <span class="ustat mov">🏃 ${unit.movLeft}/${ut.mov}</span>
+      </div>
+      <div class="action-btns">
+        ${!unit.hasActed&&unit.movLeft>0?`<button class="abtn abtn-move" onclick="startMove(${unit.id})">Move</button>`:''}
+        ${!unit.hasActed&&ut.atk>0?`<button class="abtn abtn-attack" onclick="startAttack(${unit.id})">Attack</button>`:''}
+        ${ut.canFound&&!unit.hasActed?`<button class="abtn abtn-found" onclick="startFound(${unit.id})">Found City</button>`:''}
+        <button class="abtn abtn-skip" onclick="skipUnit(${unit.id})">Skip</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderTileInfo(col,row) {}
+
+// ═══════════════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════════════
+function startMove(uid) {
+  const unit = G.units.find(u=>u.id===uid);
+  if (!unit||unit.movLeft<=0) return;
+  G.actionMode='move';
+  G.selected={type:'unit',id:uid};
+  document.getElementById('action-mode').style.display='block';
+  document.getElementById('action-mode').textContent='Select move destination';
+
+  highlightTiles.clear();
+  const reachable = hexReachable(unit.x, unit.y, unit.movLeft, 0);
+  reachable.forEach((_,key) => {
+    const [cx,cy]=key.split(',').map(Number);
+    const enemy=getUnitAt(cx,cy);
+    highlightTiles.set(key, enemy&&enemy.owner!==0?'rgba(231,76,60,0.35)':'rgba(41,128,185,0.35)');
+  });
+  renderMap();
+}
+
+function startAttack(uid) {
+  const unit = G.units.find(u=>u.id===uid);
+  if (!unit||unit.hasActed) return;
+  const ut = UNIT_TYPES[unit.type];
+  G.actionMode='attack';
+  G.selected={type:'unit',id:uid};
+  document.getElementById('action-mode').style.display='block';
+  document.getElementById('action-mode').textContent='Select attack target';
+
+  highlightTiles.clear();
+  for (let dy=-ut.range;dy<=ut.range;dy++) for (let dx=-ut.range;dx<=ut.range;dx++) {
+    const tx=unit.x+dx, ty=unit.y+dy;
+    if (tx<0||tx>=COLS||ty<0||ty>=ROWS) continue;
+    if (hexDist(unit.x,unit.y,tx,ty)>ut.range) continue;
+    const enemy=getUnitAt(tx,ty);
+    if (enemy&&enemy.owner!==0) highlightTiles.set(`${tx},${ty}`,'rgba(231,76,60,0.5)');
+  }
+  renderMap();
+}
+
+function startFound(uid) {
+  const unit = G.units.find(u=>u.id===uid);
+  if (!unit) return;
+  G.actionMode='found';
+  G.selected={type:'unit',id:uid};
+  document.getElementById('action-mode').style.display='block';
+  document.getElementById('action-mode').textContent='Click your settler to found city here';
+
+  highlightTiles.clear();
+  highlightTiles.set(`${unit.x},${unit.y}`,'rgba(212,168,75,0.5)');
+  renderMap();
+}
+
+function exitActionMode() {
+  G.actionMode=null;
+  document.getElementById('action-mode').style.display='none';
+  highlightTiles.clear();
+}
+
+function skipUnit(uid) {
+  const u=G.units.find(u=>u.id===uid);
+  if(u){u.hasActed=true;u.movLeft=0;}
+  G.selected=null;
+  document.getElementById('unit-content').innerHTML='<span style="color:var(--text-dim);font-style:italic;font-size:0.8rem;">No unit selected</span>';
+  exitActionMode();
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMBAT
+// ═══════════════════════════════════════════════════════════
+function doCombat(attacker, defender) {
+  const at=UNIT_TYPES[attacker.type], dt=UNIT_TYPES[defender.type];
+  const atkRoll = Math.floor(Math.random()*6)+1;
+  const defRoll = Math.floor(Math.random()*6)+1;
+  const dmgToDef = Math.max(1, at.atk + atkRoll*2 - dt.def - defRoll);
+  const dmgToAtk = Math.max(0, dt.atk + defRoll - at.def - atkRoll);
+
+  defender.hp -= dmgToDef;
+  attacker.hp -= dmgToAtk;
+  attacker.hasActed=true; attacker.movLeft=0;
+
+  log(`⚔ ${at.name} attacks ${dt.name}: deals ${dmgToDef}, takes ${dmgToAtk}`, attacker.owner===0?'good':'bad');
+
+  if (defender.hp <= 0) {
+    log(`💀 ${dt.name} destroyed!`, attacker.owner===0?'good':'bad');
+    G.units = G.units.filter(u=>u.id!==defender.id);
+    // Move into tile if melee
+    if (at.range===1) { attacker.x=defender.x; attacker.y=defender.y; }
+    checkVictory();
+  }
+  if (attacker.hp <= 0) {
+    log(`💀 ${at.name} lost!`, attacker.owner===0?'bad':'good');
+    G.units = G.units.filter(u=>u.id!==attacker.id);
+  }
+}
+
+function checkVictory() {
+  const aiUnits=getAIUnits(), aiCities=G.cities.filter(c=>c.owner===1);
+  const pUnits=getPlayerUnits(), pCities=getPlayerCities();
+  if (aiUnits.length===0&&aiCities.length===0) showEndgame(true);
+  if (pUnits.length===0&&pCities.length===0) showEndgame(false);
+}
+
+function showEndgame(win) {
+  document.getElementById('endgame').classList.add('open');
+  document.getElementById('endgame-title').textContent = win?'Victory!':'Defeat!';
+  document.getElementById('endgame-title').className = win?'victory-title':'defeat-title';
+  document.getElementById('endgame-body').textContent = win
+    ?`Your empire conquered all in Turn ${G.turn}. History shall remember your name!`
+    :`Your civilization has fallen. The enemy stands triumphant.`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// END TURN
+// ═══════════════════════════════════════════════════════════
+function endTurn() {
+  // Player city processing
+  getPlayerCities().forEach(city => {
+    const food=calcCityYield(city,'food');
+    const prod=calcCityYield(city,'prod');
+    const sci=calcCityYield(city,'sci');
+    const goldY=calcCityYield(city,'gold');
+
+    city.food += food;
+    G.player.gold += goldY * 0.5;
+    G.player.science += sci;
+
+    // Growth
+    if (city.food >= city.foodNeeded) {
+      city.food -= city.foodNeeded;
+      city.pop++;
+      city.foodNeeded = Math.floor(city.foodNeeded * 1.5);
+      log(`📈 ${city.name} grows to pop ${city.pop}!`, 'good');
+      // Expand territory
+      const nbrs = hexNeighbors(city.x, city.y).filter(([x,y])=>G.map[y][x].owner===-1&&TERRAIN_DATA[G.map[y][x].terrain].passable);
+      if (nbrs.length) {
+        const [nx,ny]=nbrs[Math.floor(Math.random()*nbrs.length)];
+        G.map[ny][nx].owner=0;
+        city.territory.push({x:nx,y:ny});
+      }
+    }
+
+    // Production
+    if (city.building) {
+      city.prod += prod;
+      city.building.progress += prod;
+      const cost = getBuildCost(city.building.type);
+      if (city.building.progress >= cost) {
+        const btype = city.building.type;
+        city.building=null; city.prod=0;
+        if (UNIT_TYPES[btype]) {
+          spawnUnit(btype, city.x, city.y, 0);
+          log(`🎉 ${city.name} trained ${UNIT_TYPES[btype].name}!`, 'gold');
+        } else if (DISTRICT_TYPES[btype]) {
+          city.districts.push(btype);
+          log(`🏗 ${city.name} built ${DISTRICT_TYPES[btype].name}!`, 'gold');
+        }
+      }
+    }
+  });
+
+  // Tech research
+  if (G.player.currentTech) {
+    const tech = TECHS.find(t=>t.id===G.player.currentTech);
+    if (tech) {
+      G.player.science -= 0; // already accumulated
+      if (G.player.science >= tech.cost) {
+        G.player.techs.add(tech.id);
+        G.player.science -= tech.cost;
+        log(`🔬 Researched ${tech.name}!`, 'gold');
+        G.player.currentTech = null;
+        renderTechBar();
+      }
+    }
+  }
+
+  // AI TURN
+  doAITurn();
+
+  // Reset unit movement
+  G.units.forEach(u=>{u.movLeft=UNIT_TYPES[u.type].mov; u.hasActed=false;});
+  G.turn++;
+
+  // Fog update
+  updateFog(0);
+  G.selected=null;
+  exitActionMode();
+  document.getElementById('unit-content').innerHTML='<span style="color:var(--text-dim);font-style:italic;font-size:0.8rem;">No unit selected</span>';
+  renderAll();
+  renderSidebar();
+  renderTechBar();
+  checkVictory();
+}
+
+// ═══════════════════════════════════════════════════════════
+// AI
+// ═══════════════════════════════════════════════════════════
+function doAITurn() {
+  // City processing
+  G.cities.filter(c=>c.owner===1).forEach(city=>{
+    const prod=calcCityYield(city,'prod');
+    const food=calcCityYield(city,'food');
+    city.food+=food; G.ai.gold+=calcCityYield(city,'gold')*0.3;
+    if (city.food>=city.foodNeeded){city.food-=city.foodNeeded;city.pop++;city.foodNeeded=Math.floor(city.foodNeeded*1.5);}
+    if (!city.building) {
+      // Choose what to build
+      const opts=['warrior','archer','warrior'];
+      city.building={type:opts[Math.floor(Math.random()*opts.length)],progress:0};
+    } else {
+      city.building.progress+=prod;
+      if (city.building.progress>=getBuildCost(city.building.type)){
+        spawnUnit(city.building.type,city.x,city.y,1);
+        city.building=null;
+      }
+    }
+  });
+
+  // AI units act
+  getAIUnits().forEach(u=>{
+    if (u.hasActed) return;
+    const ut=UNIT_TYPES[u.type];
+
+    if (ut.canFound) {
+      // Found city
+      const tile=G.map[u.y][u.x];
+      if (TERRAIN_DATA[tile.terrain].canSettle && !tile.city) {
+        foundCity(u.x,u.y,1); return;
+      }
+      // Move toward open land
+      const nbrs=hexNeighbors(u.x,u.y).filter(([x,y])=>TERRAIN_DATA[G.map[y][x].terrain].passable&&!getUnitAt(x,y));
+      if (nbrs.length){const[nx,ny]=nbrs[Math.floor(Math.random()*nbrs.length)];u.x=nx;u.y=ny;}
+      return;
+    }
+
+    // Find nearest player unit or city
+    let target=null, tdist=999;
+    getPlayerUnits().forEach(pu=>{
+      const d=hexDist(u.x,u.y,pu.x,pu.y);
+      if(d<tdist){tdist=d;target=pu;}
+    });
+    getPlayerCities().forEach(pc=>{
+      const d=hexDist(u.x,u.y,pc.x,pc.y);
+      if(d<tdist){tdist=d;target={x:pc.x,y:pc.y,hp:50,owner:0,id:-pc.id,type:'warrior'};}
+    });
+
+    if (!target) return;
+
+    if (tdist<=ut.range && ut.atk>0) {
+      const enemy=getUnitAt(target.x,target.y);
+      if (enemy) { doCombat(u, enemy); return; }
+    }
+
+    // Move toward target
+    const nbrs=hexNeighbors(u.x,u.y).filter(([x,y])=>{
+      const t=TERRAIN_DATA[G.map[y][x].terrain];
+      return t.passable && !getUnitAt(x,y);
+    });
+    if (nbrs.length) {
+      nbrs.sort(([ax,ay],[bx,by])=>hexDist(ax,ay,target.x,target.y)-hexDist(bx,by,target.x,target.y));
+      const[nx,ny]=nbrs[0];
+      u.x=nx; u.y=ny;
+    }
+    u.hasActed=true; u.movLeft=0;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// TECH
+// ═══════════════════════════════════════════════════════════
+function renderTechBar() {
+  const grid=document.getElementById('tech-grid');
+  grid.innerHTML='';
+  TECHS.forEach(tech=>{
+    const done=G.player.techs.has(tech.id);
+    const current=G.player.currentTech===tech.id;
+    const prereqMet=tech.prereq.every(p=>G.player.techs.has(p));
+    const div=document.createElement('div');
+    div.className='tech-item'+(done?' researched':current?' researching':prereqMet?'':' locked');
+    div.title=`${tech.name} (${tech.cost} 🔬)${tech.unlocks.length?' — Unlocks: '+tech.unlocks.join(', '):''}`;
+    div.textContent=`${tech.icon} ${tech.name}`;
+    if (!done && prereqMet && !current) {
+      div.onclick=()=>{ G.player.currentTech=tech.id; log(`🔬 Researching ${tech.name}...`); renderTechBar(); };
+    }
+    grid.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOG
+// ═══════════════════════════════════════════════════════════
+function log(msg, cls='') {
+  const logEl=document.getElementById('log');
+  const p=document.createElement('p');
+  if(cls)p.className=cls;
+  p.textContent=msg;
+  logEl.prepend(p);
+  while(logEl.children.length>40)logEl.removeChild(logEl.lastChild);
+}
+
+// Modal helpers
+let _modalCb=null;
+function openModal(title,body,cb){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').textContent=body;
+  document.getElementById('modal-overlay').classList.add('open');
+  _modalCb=cb;
+}
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); _modalCb=null; }
+function confirmModal(){ if(_modalCb)_modalCb(); closeModal(); }
+function findGoodSpot(){}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('load',()=>{
+  resizeCanvas();
+  window.addEventListener('resize',()=>{resizeCanvas(); renderAll();});
+  newGame();
+  // Center camera on player unit
+  const pu=getPlayerUnits()[0];
+  if(pu){
+    const[px,py]=hexToPixel(pu.x,pu.y);
+    G.camera.x=Math.max(0,px-canvasW/2);
+    G.camera.y=Math.max(0,py-canvasH/2);
+    clampCamera();
+  }
+  renderAll();
+  startAnimLoop();
+});
+</script>
+</body>
+</html>
