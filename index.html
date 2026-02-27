@@ -330,6 +330,60 @@ body {
 
 /* Fog of war overlay via canvas — handled in JS */
 
+/* ── CIV SELECT ── */
+#civ-select-screen {
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at 50% 40%, #0f1825 0%, #060a10 100%);
+  z-index: 700;
+  display: flex; justify-content: center; align-items: center;
+}
+#civ-select-screen.hidden { display: none; }
+#civ-select-box { text-align: center; max-width: 700px; width: 95%; }
+#civ-select-title {
+  font-family: 'Uncial Antiqua', cursive;
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  color: var(--gold2);
+  text-shadow: 0 0 40px rgba(240,192,96,0.5);
+  margin-bottom: 6px; letter-spacing: 0.08em;
+}
+#civ-select-sub {
+  font-family: 'IM Fell English', serif; font-style: italic;
+  color: var(--text-dim); font-size: 1rem; margin-bottom: 28px;
+}
+#civ-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 18px; }
+.civ-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(0,0,0,0.4));
+  border: 2px solid rgba(180,150,80,0.15);
+  border-radius: 8px; padding: 16px 14px; cursor: pointer;
+  transition: all 0.2s; text-align: left; position: relative; overflow: hidden;
+}
+.civ-card:hover { border-color: rgba(180,150,80,0.4); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+.civ-card.selected { transform: translateY(-2px); }
+.civ-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.civ-flag { font-size: 1.8rem; }
+.civ-name-block .civ-name { font-family: 'Uncial Antiqua', cursive; font-size: 1rem; }
+.civ-name-block .civ-leader { font-size: 0.72rem; color: var(--text-dim); font-style: italic; margin-top: 1px; }
+.civ-desc { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 6px; font-style: italic; }
+.civ-bonus { font-size: 0.72rem; color: var(--text); background: rgba(0,0,0,0.3); border-radius: 3px; padding: 5px 8px; border-left: 2px solid; }
+#ai-pick-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; }
+#ai-civ-select {
+  background: var(--panel2); border: 1px solid var(--border);
+  color: var(--text); font-family: 'Philosopher', serif;
+  padding: 5px 10px; border-radius: 3px; font-size: 0.8rem; cursor: pointer;
+}
+#start-game-btn {
+  font-family: 'Uncial Antiqua', cursive; font-size: 1rem; letter-spacing: 0.08em;
+  padding: 12px 40px;
+  background: linear-gradient(135deg, rgba(139,26,26,0.6), rgba(192,57,43,0.4));
+  border: 1px solid rgba(231,76,60,0.5); color: #ffcdc9; border-radius: 5px;
+  cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+#start-game-btn:not(:disabled):hover {
+  background: linear-gradient(135deg,rgba(160,40,20,0.8),rgba(231,76,60,0.6));
+  box-shadow: 0 0 20px rgba(231,76,60,0.4); transform: translateY(-1px);
+}
+#start-game-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* Victory/defeat */
 #endgame {
   display: none; position: fixed; inset: 0;
@@ -416,11 +470,31 @@ body {
   </div>
 </div>
 
+<!-- Civ Select Screen -->
+<div id="civ-select-screen">
+  <div id="civ-select-box">
+    <div id="civ-select-title">⚔ Empires of the Age ⚔</div>
+    <div id="civ-select-sub">Choose your civilization</div>
+    <div id="civ-grid"></div>
+    <div id="ai-pick-row">
+      <span style="color:var(--text-dim);font-size:0.8rem;">AI Opponent:</span>
+      <select id="ai-civ-select">
+        <option value="random">🎲 Random</option>
+        <option value="rome">🦅 Rome</option>
+        <option value="egypt">🌙 Egypt</option>
+        <option value="mongolia">🐎 Mongolia</option>
+        <option value="greece">🦉 Greece</option>
+      </select>
+    </div>
+    <button id="start-game-btn" disabled onclick="startSelectedGame()">Select a Civilization</button>
+  </div>
+</div>
+
 <!-- Endgame -->
 <div id="endgame">
   <h2 id="endgame-title"></h2>
   <p id="endgame-body"></p>
-  <button style="margin-top:20px;padding:10px 30px;background:rgba(212,168,75,0.2);border:1px solid var(--gold);color:var(--gold2);font-family:'Philosopher',serif;font-size:1rem;border-radius:3px;cursor:pointer;" onclick="location.reload()">New Game</button>
+  <button style="margin-top:20px;padding:10px 30px;background:rgba(212,168,75,0.2);border:1px solid var(--gold);color:var(--gold2);font-family:'Philosopher',serif;font-size:1rem;border-radius:3px;cursor:pointer;" onclick="selectedPlayerCiv=null;document.getElementById('civ-select-screen').classList.remove('hidden');document.getElementById('endgame').classList.remove('open');buildCivSelectScreen();">New Game</button>
 </div>
 
 <script>
@@ -484,33 +558,171 @@ const CITY_NAMES_P = ['Ironforge','Ashenvale','Goldenhall','Duskwater','Sunreach
 const CITY_NAMES_AI= ['Shadowmere','Dreadholm','Ironspire','Bloodfen','Darkreach','Grimwall','Ashkeep','Veilhaven'];
 
 // ═══════════════════════════════════════════════════════════
+// CIVILIZATIONS
+// ═══════════════════════════════════════════════════════════
+const CIVILIZATIONS = {
+  rome: {
+    name: 'Rome',
+    leader: 'Julius Caesar',
+    icon: '🦅',
+    flag: '🏛',
+    color: '#c0392b',
+    colorDark: '#7b241c',
+    colorBright: '#e74c3c',
+    description: 'Masters of construction and discipline.',
+    bonus: 'Production +25% in all cities. Barracks cost 50% less.',
+    bonusFn: (type, val) => type==='prod' ? Math.floor(val*1.25) : val,
+    buildCostMod: (type) => type==='barracks' ? 0.5 : 1.0,
+    startTech: 'bronze_working',
+    cityNames: ['Roma','Capua','Mediolanum','Neapolis','Ravenna','Bononia','Florentia','Augusta'],
+    unitColor: ['rgba(180,40,40,0.95)','rgba(100,10,10,0.95)'],
+    borderColor: '#e74c3c',
+  },
+  egypt: {
+    name: 'Egypt',
+    leader: 'Cleopatra',
+    icon: '🌙',
+    flag: '🏺',
+    color: '#d4a017',
+    colorDark: '#8a6610',
+    colorBright: '#f0c060',
+    description: 'Ancient kingdom of the Nile, blessed with abundance.',
+    bonus: 'Food +30% in all cities. Cities grow 20% faster.',
+    bonusFn: (type, val) => type==='food' ? Math.floor(val*1.3) : val,
+    buildCostMod: () => 1.0,
+    startTech: 'pottery',
+    cityNames: ['Memphis','Thebes','Alexandria','Heliopolis','Amarna','Luxor','Karnak','Giza'],
+    unitColor: ['rgba(180,150,20,0.95)','rgba(100,80,5,0.95)'],
+    borderColor: '#f0c060',
+    growthBonus: 0.8,
+  },
+  mongolia: {
+    name: 'Mongolia',
+    leader: 'Genghis Khan',
+    icon: '🐎',
+    flag: '⚔',
+    color: '#16a085',
+    colorDark: '#0e6655',
+    colorBright: '#1abc9c',
+    description: 'Unstoppable horse lords of the steppe.',
+    bonus: 'Horsemen have +50% attack. All units move +1.',
+    bonusFn: (type, val) => val,
+    buildCostMod: () => 1.0,
+    startTech: 'animal_husbandry',
+    cityNames: ['Karakorum','Ulaanbaatar','Erdenet','Darkhan','Khovd','Ölgii','Arvaikheer','Bayankhongor'],
+    unitColor: ['rgba(22,160,133,0.95)','rgba(10,80,65,0.95)'],
+    borderColor: '#1abc9c',
+    cavalryBonus: 1.5,
+    movBonus: 1,
+  },
+  greece: {
+    name: 'Greece',
+    leader: 'Pericles',
+    icon: '🦉',
+    flag: '📜',
+    color: '#2980b9',
+    colorDark: '#1a5276',
+    colorBright: '#3498db',
+    description: 'Cradle of philosophy, science, and democracy.',
+    bonus: 'Science +35% in all cities. Tech costs reduced by 10%.',
+    bonusFn: (type, val) => type==='sci' ? Math.floor(val*1.35) : val,
+    buildCostMod: () => 1.0,
+    startTech: 'writing',
+    cityNames: ['Athens','Sparta','Corinth','Argos','Thebes','Olympia','Delphi','Thessaloniki'],
+    unitColor: ['rgba(41,128,185,0.95)','rgba(20,60,110,0.95)'],
+    borderColor: '#3498db',
+    techCostMod: 0.9,
+  },
+};
+const CIV_KEYS = Object.keys(CIVILIZATIONS);
+
+// ═══════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════
-let G = {}; // game state
+let selectedPlayerCiv = null;
 
-function newGame() {
+function buildCivSelectScreen() {
+  const grid = document.getElementById('civ-grid');
+  grid.innerHTML = '';
+  CIV_KEYS.forEach(key => {
+    const civ = CIVILIZATIONS[key];
+    const card = document.createElement('div');
+    card.className = 'civ-card';
+    card.style.setProperty('--civ-glow', civ.color+'88');
+    card.innerHTML = `
+      <div class="civ-header">
+        <span class="civ-flag">${civ.flag}</span>
+        <div class="civ-name-block">
+          <div class="civ-name" style="color:${civ.colorBright}">${civ.icon} ${civ.name}</div>
+          <div class="civ-leader">${civ.leader}</div>
+        </div>
+      </div>
+      <div class="civ-desc">${civ.description}</div>
+      <div class="civ-bonus" style="border-color:${civ.color}">⭐ ${civ.bonus}</div>
+    `;
+    card.onclick = () => {
+      document.querySelectorAll('.civ-card').forEach(c => {
+        c.classList.remove('selected');
+        c.style.borderColor = 'rgba(180,150,80,0.15)';
+        c.style.boxShadow = '';
+      });
+      card.classList.add('selected');
+      card.style.borderColor = civ.colorBright;
+      card.style.boxShadow = `0 0 20px ${civ.color}66`;
+      selectedPlayerCiv = key;
+      const btn = document.getElementById('start-game-btn');
+      btn.disabled = false;
+      btn.textContent = `Lead ${civ.name} to Glory ▶`;
+    };
+    grid.appendChild(card);
+  });
+}
+
+function startSelectedGame() {
+  if (!selectedPlayerCiv) return;
+  let aiCivKey = document.getElementById('ai-civ-select').value;
+  if (aiCivKey === 'random') {
+    const others = CIV_KEYS.filter(k => k !== selectedPlayerCiv);
+    aiCivKey = others[Math.floor(Math.random() * others.length)];
+  }
+  document.getElementById('civ-select-screen').classList.add('hidden');
+  newGame(selectedPlayerCiv, aiCivKey);
+  // Center camera on player units
+  const pu = getPlayerUnits()[0];
+  if (pu) {
+    const [px,py] = hexToPixel(pu.x, pu.y);
+    G.camera.x = Math.max(0, px - canvasW/2);
+    G.camera.y = Math.max(0, py - canvasH/2);
+    clampCamera();
+  }
+  renderAll();
+}
+
+function newGame(playerCivKey='rome', aiCivKey='mongolia') {
+  const playerCiv = CIVILIZATIONS[playerCivKey];
+  const aiCiv = CIVILIZATIONS[aiCivKey];
+
+  // Update topbar civ name
+  document.getElementById('game-title').textContent = `${playerCiv.icon} ${playerCiv.name}  vs  ${aiCiv.icon} ${aiCiv.name}`;
+
   G = {
     turn: 1,
     map: generateMap(),
     units: [],
     cities: [],
     nextId: 1,
-    // Player
+    playerCiv,
+    aiCiv,
     player: { gold: 50, science: 0, sciPerTurn: 0, currentTech: null, techs: new Set(), goldPerTurn: 0 },
-    // AI
     ai: { gold: 50, science: 0, currentTech: null, techs: new Set(), aggression: 0.4 },
-    // Selection
-    selected: null, // {type:'unit'|'city'|'tile', id, ...}
-    actionMode: null, // 'move'|'attack'|'found'
+    selected: null,
+    actionMode: null,
     camera: { x: 0, y: 0 },
-    fog: new Uint8Array(COLS * ROWS), // 0=fog, 1=seen, 2=visible
+    fog: new Uint8Array(COLS * ROWS),
   };
 
   // Place player settler at center-left
   const sx = Math.floor(COLS * 0.25), sy = Math.floor(ROWS / 2);
-  findGoodSpot(sx, sy, 0, (x,y) => {
-    G.map[y][x].terrain !== T.WATER && G.map[y][x].terrain !== T.MOUNTAIN;
-  });
   spawnUnit('settler', sx, sy, 0);
   spawnUnit('warrior', sx+1, sy, 0);
 
@@ -519,13 +731,15 @@ function newGame() {
   spawnUnit('settler', ax, ay, 1);
   spawnUnit('warrior', ax-1, ay, 1);
 
-  // Tech: start with basics
-  G.player.techs.add('pottery');
+  // Starting techs from civ
+  G.player.techs.add(playerCiv.startTech);
+  G.ai.techs.add(aiCiv.startTech);
 
   updateFog(0);
   renderAll();
   renderTechBar();
-  log('Your empire awakens. Found your first city!', 'gold');
+  log(`${playerCiv.icon} ${playerCiv.name} awakens! Lead ${playerCiv.leader} to glory.`, 'gold');
+  log(`Your starting tech: ${playerCiv.startTech.replace(/_/g,' ')}.`, '');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -590,10 +804,12 @@ function rng2(x,y) {
 // ═══════════════════════════════════════════════════════════
 function spawnUnit(type, x, y, owner) {
   const t = UNIT_TYPES[type];
+  const civ = owner===0 ? G.playerCiv : G.aiCiv;
+  const movBonus = civ?.movBonus || 0;
   G.units.push({
     id: G.nextId++, type, owner, x, y,
     hp: t.hp, maxHp: t.hp,
-    movLeft: t.mov, maxMov: t.mov,
+    movLeft: t.mov + movBonus, maxMov: t.mov + movBonus,
     hasActed: false,
   });
 }
@@ -607,9 +823,9 @@ function getAIUnits() { return G.units.filter(u=>u.owner===1&&u.hp>0); }
 // ═══════════════════════════════════════════════════════════
 function foundCity(x, y, owner) {
   const tile = G.map[y][x];
-  const names = owner===0?CITY_NAMES_P:CITY_NAMES_AI;
+  const civ = owner===0 ? G.playerCiv : G.aiCiv;
   const used = G.cities.filter(c=>c.owner===owner).map(c=>c.name);
-  const name = names.find(n=>!used.includes(n)) || `City ${G.nextId}`;
+  const name = civ.cityNames.find(n=>!used.includes(n)) || `City ${G.nextId}`;
 
   const city = {
     id: G.nextId++, name, owner, x, y,
@@ -939,11 +1155,11 @@ function drawHex(col, row) {
   // ── OWNER BORDER TINT ──
   if (tile.owner===0) {
     hexPath(px,py,R);
-    ctx.strokeStyle='rgba(80,160,240,0.55)';
+    ctx.strokeStyle= G.playerCiv ? G.playerCiv.borderColor+'99' : 'rgba(80,160,240,0.55)';
     ctx.lineWidth=2.5; ctx.stroke();
   } else if (tile.owner===1) {
     hexPath(px,py,R);
-    ctx.strokeStyle='rgba(220,60,60,0.55)';
+    ctx.strokeStyle= G.aiCiv ? G.aiCiv.borderColor+'99' : 'rgba(220,60,60,0.55)';
     ctx.lineWidth=2.5; ctx.stroke();
   }
 
@@ -1061,6 +1277,8 @@ function drawUnit(u) {
   const isPlayer = u.owner===0;
   const spent = u.hasActed && isPlayer;
 
+  const civ = isPlayer ? G.playerCiv : G.aiCiv;
+
   // Outer glow if selected
   if (isSelected) {
     ctx.beginPath(); ctx.arc(px,py,HS*0.48,0,Math.PI*2);
@@ -1083,20 +1301,14 @@ function drawUnit(u) {
 
   // Outer shield ring
   shieldPath(px,py-2,HS*0.38);
-  ctx.strokeStyle = isPlayer?'#5dade2':'#e74c3c';
-  ctx.lineWidth = 2.5;
-  ctx.stroke();
+  ctx.strokeStyle = civ.borderColor;
+  ctx.lineWidth = 2.5; ctx.stroke();
 
   // Shield fill
   shieldPath(px,py-2,HS*0.38);
   const sg = ctx.createLinearGradient(px-HS*0.4,py-HS*0.4,px+HS*0.2,py+HS*0.5);
-  if (isPlayer) {
-    sg.addColorStop(0,'rgba(50,120,200,0.95)');
-    sg.addColorStop(1,'rgba(20,60,120,0.95)');
-  } else {
-    sg.addColorStop(0,'rgba(200,50,50,0.95)');
-    sg.addColorStop(1,'rgba(100,20,20,0.95)');
-  }
+  sg.addColorStop(0, civ.unitColor[0]);
+  sg.addColorStop(1, civ.unitColor[1]);
   ctx.fillStyle=sg; ctx.fill();
 
   // Shield gloss
@@ -1140,7 +1352,11 @@ function renderMinimap() {
     mmCtx.fillRect(col*cellW,row*cellH,cellW,cellH);
     if (tile.city!==null) {
       const c=G.cities.find(c=>c.id===tile.city);
-      if(c) { mmCtx.fillStyle=c.owner===0?'#3498db':'#e74c3c'; mmCtx.fillRect(col*cellW,row*cellH,cellW,cellH); }
+      if(c) {
+        const civ = c.owner===0 ? G.playerCiv : G.aiCiv;
+        mmCtx.fillStyle= civ ? civ.color : (c.owner===0?'#3498db':'#e74c3c');
+        mmCtx.fillRect(col*cellW,row*cellH,cellW,cellH);
+      }
     }
   }
   // Camera rect
@@ -1206,25 +1422,28 @@ function calcCityYield(city, type) {
   const tile = G.map[city.y][city.x];
   const td = TERRAIN_DATA[tile.terrain];
   let base = td[type]||0;
-  // Territory bonus
   city.territory.forEach(({x,y})=>{
     if (x===city.x&&y===city.y) return;
     const t2 = TERRAIN_DATA[G.map[y][x].terrain];
     base += (t2[type]||0) * 0.3;
   });
   base = Math.floor(base) + city.pop;
-  // District bonuses
   city.districts.forEach(d=>{
     const dd = DISTRICT_TYPES[d];
     if (dd[type]) base += dd[type];
     if (type==='gold'&&dd.gold) base += dd.gold;
   });
+  // Apply civ bonus
+  const civ = city.owner===0 ? G.playerCiv : G.aiCiv;
+  if (civ && civ.bonusFn) base = civ.bonusFn(type, base);
   return Math.max(1, Math.floor(base));
 }
 
-function getBuildCost(type) {
-  if (UNIT_TYPES[type]) return UNIT_TYPES[type].cost;
-  if (DISTRICT_TYPES[type]) return DISTRICT_TYPES[type].cost;
+function getBuildCost(type, owner=0) {
+  const civ = owner===0 ? G.playerCiv : G.aiCiv;
+  const mod = civ && civ.buildCostMod ? civ.buildCostMod(type) : 1.0;
+  if (UNIT_TYPES[type]) return Math.floor(UNIT_TYPES[type].cost * mod);
+  if (DISTRICT_TYPES[type]) return Math.floor(DISTRICT_TYPES[type].cost * mod);
   return 50;
 }
 function getBuildName(type) {
@@ -1453,9 +1672,13 @@ function skipUnit(uid) {
 // ═══════════════════════════════════════════════════════════
 function doCombat(attacker, defender) {
   const at=UNIT_TYPES[attacker.type], dt=UNIT_TYPES[defender.type];
+  const atkCiv = attacker.owner===0 ? G.playerCiv : G.aiCiv;
   const atkRoll = Math.floor(Math.random()*6)+1;
   const defRoll = Math.floor(Math.random()*6)+1;
-  const dmgToDef = Math.max(1, at.atk + atkRoll*2 - dt.def - defRoll);
+  // Mongolia cavalry bonus
+  let atkPower = at.atk;
+  if (atkCiv?.cavalryBonus && attacker.type==='horseman') atkPower = Math.floor(atkPower * atkCiv.cavalryBonus);
+  const dmgToDef = Math.max(1, atkPower + atkRoll*2 - dt.def - defRoll);
   const dmgToAtk = Math.max(0, dt.atk + defRoll - at.def - atkRoll);
 
   defender.hp -= dmgToDef;
@@ -1512,7 +1735,8 @@ function endTurn() {
     if (city.food >= city.foodNeeded) {
       city.food -= city.foodNeeded;
       city.pop++;
-      city.foodNeeded = Math.floor(city.foodNeeded * 1.5);
+      const growthMod = G.playerCiv?.growthBonus || 1.0;
+      city.foodNeeded = Math.floor(city.foodNeeded * 1.5 * growthMod);
       log(`📈 ${city.name} grows to pop ${city.pop}!`, 'good');
       // Expand territory
       const nbrs = hexNeighbors(city.x, city.y).filter(([x,y])=>G.map[y][x].owner===-1&&TERRAIN_DATA[G.map[y][x].terrain].passable);
@@ -1546,10 +1770,11 @@ function endTurn() {
   if (G.player.currentTech) {
     const tech = TECHS.find(t=>t.id===G.player.currentTech);
     if (tech) {
-      G.player.science -= 0; // already accumulated
-      if (G.player.science >= tech.cost) {
+      const costMod = G.playerCiv?.techCostMod || 1.0;
+      const effectiveCost = Math.floor(tech.cost * costMod);
+      if (G.player.science >= effectiveCost) {
         G.player.techs.add(tech.id);
-        G.player.science -= tech.cost;
+        G.player.science -= effectiveCost;
         log(`🔬 Researched ${tech.name}!`, 'gold');
         G.player.currentTech = null;
         renderTechBar();
@@ -1697,17 +1922,8 @@ function findGoodSpot(){}
 // ═══════════════════════════════════════════════════════════
 window.addEventListener('load',()=>{
   resizeCanvas();
-  window.addEventListener('resize',()=>{resizeCanvas(); renderAll();});
-  newGame();
-  // Center camera on player unit
-  const pu=getPlayerUnits()[0];
-  if(pu){
-    const[px,py]=hexToPixel(pu.x,pu.y);
-    G.camera.x=Math.max(0,px-canvasW/2);
-    G.camera.y=Math.max(0,py-canvasH/2);
-    clampCamera();
-  }
-  renderAll();
+  window.addEventListener('resize',()=>{ resizeCanvas(); if(G.map) renderAll(); });
+  buildCivSelectScreen();
   startAnimLoop();
 });
 </script>
